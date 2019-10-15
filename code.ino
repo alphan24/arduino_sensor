@@ -4,7 +4,6 @@
 #include <VL53L0X.h>
 #include <DS3231.h>
 
-
 typedef struct { 
     float X, Y, Z; 
 }Vector; 
