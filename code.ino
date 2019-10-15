@@ -40,8 +40,7 @@ void setup(){
   mpuInit(MPU2);
   rtc.begin();
   sensorInit();
-  Serial.begin(38400);
-  
+  Serial.begin(38400);  
 }
 
 void loop(){
