@@ -15,9 +15,7 @@ Vector k;
 Vector gForceVectorAverage;
 Vector tempVector;
 
-VL53L0X sensor1;// define object for sensor 1
-VL53L0X sensor2;// define object for sensor 2
-VL53L0X sensor3;// define object for sensor 3
+VL53L0X sensor1,sensor2,sensor3;// define objects for sensors
 
 DS3231  rtc(SDA, SCL);
 
