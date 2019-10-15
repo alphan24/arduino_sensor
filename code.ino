@@ -41,8 +41,6 @@ void setup(){
   k.X=0;
   k.Y=0;
   k.Z=1;
-  mpuInit(MPU1);
-  mpuInit(MPU2);
   rtc.begin();
   sensorInit();
   Serial.begin(38400); 
@@ -96,6 +94,9 @@ void sensorInit(){
   sensor1.startContinuous();// measure continuously for sensor 1
   sensor2.startContinuous();// measure continuously for sensor 2  
   sensor3.startContinuous();// measure continuously for sensor 3
+  
+  mpuInit(MPU1);
+  mpuInit(MPU2);
 }
 Vector avaregeVectors(Vector vectorA,Vector vectorB){
   tempVector.X = (vectorA.X+vectorB.X)/2;
@@ -142,4 +143,3 @@ float dotProduct(Vector vectorA,Vector vectorB){
 float magnitude(Vector vector){
  return sqrt(sq(vector.X)+sq(vector.Y)+sq(vector.Z));
 }
-
