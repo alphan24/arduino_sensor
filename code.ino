@@ -15,6 +15,11 @@ Vector k;
 Vector gForceVectorAverage;
 Vector tempVector;
 
+typedef struct { 
+    int sensor1, sensor2, sensor3; 
+}Distance;
+
+Distance distance, distanceData;
 VL53L0X sensor1,sensor2,sensor3;// define objects for sensors
 
 DS3231  rtc(SDA, SCL);
@@ -24,11 +29,11 @@ long accelX, accelY, accelZ;
 float gForceX, gForceY, gForceZ;
 int angle;
 String dataString = "";
-int distance1,distance2,distance3;
 File dataFile;
 
 Vector GetMpuValue(const int MPU);
 Vector avaregeVectors(Vector vectorA,Vector vectorB);
+Distance getDistance();
 float dotProduct(Vector vectorA,Vector vectorB);
 float magnitude(Vector vector);
 
@@ -40,14 +45,11 @@ void setup(){
   mpuInit(MPU2);
   rtc.begin();
   sensorInit();
-  Serial.begin(38400);  
+  Serial.begin(38400); 
 }
 
 void loop(){
-  // read three distance sensors:
-  distance1 = sensor1.readRangeContinuousMillimeters();// get distance for sensor 1
-  distance2 = sensor2.readRangeContinuousMillimeters();// get distance for sensor 2
-  distance3 = sensor3.readRangeContinuousMillimeters();// get distance for sensor 3
+  distanceData = getDistance();//read distance sensor values
   
   // read acceleration sensors:
   gForceVector1 = GetMpuValue(MPU1);
@@ -56,7 +58,8 @@ void loop(){
   angle = degrees(acos(dotProduct(gForceVectorAverage,k)/magnitude(gForceVectorAverage)));
   
   // append sesnsor values to stirng:
-  dataString = String(distance1)+","+String(distance2)+","+String(distance3)+","+String(angle)+","+String(rtc.getDateStr())+","+String(rtc.getTimeStr());
+  dataString = String(distanceData.sensor1)+","+String(distanceData.sensor2)+","+String(distanceData.sensor3)+","
+  +String(angle)+","+String(rtc.getDateStr())+","+String(rtc.getTimeStr());
 
   dataFile = SD.open("datalog.txt", FILE_WRITE);
 
@@ -71,6 +74,12 @@ void loop(){
   else {
     Serial.println("error opening datalog.txt");
   }
+}
+Distance getDistance(){
+  distance.sensor1 = sensor1.readRangeContinuousMillimeters();// get distance for sensor 1
+  distance.sensor2 = sensor2.readRangeContinuousMillimeters();// get distance for sensor 2
+  distance.sensor3 = sensor3.readRangeContinuousMillimeters();// get distance for sensor 3
+  return distance;
 }
 void sensorInit(){
   Wire.begin();
@@ -133,3 +142,4 @@ float dotProduct(Vector vectorA,Vector vectorB){
 float magnitude(Vector vector){
  return sqrt(sq(vector.X)+sq(vector.Y)+sq(vector.Z));
 }
+
