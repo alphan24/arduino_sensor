@@ -3,6 +3,8 @@
 #include <SD.h>
 #include <VL53L0X.h>
 #include <DS3231.h>
+#include <LCD.h>
+#include <LiquidCrystal_I2C.h>
 
 typedef struct { 
     float X, Y, Z; 
@@ -24,54 +26,87 @@ VL53L0X sensor1,sensor2,sensor3;// define objects for sensors
 
 DS3231  rtc(SDA, SCL);
 
-const int MPU2 = 0x69, MPU1=0x68,chipSelect = 4;
+const int MPU = 0x69;
+const int chipSelect = 4;
 long accelX, accelY, accelZ;
 float gForceX, gForceY, gForceZ;
 int angle;
 String dataString = "";
-File dataFile;
 
+//Define variables
+#define I2C_ADDR 0x27 //Define I2C Address where the PCF8574A is
+#define BACKLIGHT_PIN 3
+#define En_pin 2
+#define Rw_pin 1
+#define Rs_pin 0
+#define D4_pin 4
+#define D5_pin 5
+#define D6_pin 6
+#define D7_pin 7
+
+LiquidCrystal_I2C lcd(I2C_ADDR, En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin);//Initialise the LCD
 Vector GetMpuValue(const int MPU);
 Vector avaregeVectors(Vector vectorA,Vector vectorB);
 Distance getDistance();
 float dotProduct(Vector vectorA,Vector vectorB);
 float magnitude(Vector vector);
-
+String time;
 void setup(){
-  k.X=0;
+  k.X=1;
   k.Y=0;
-  k.Z=1;
-  rtc.begin();
+  k.Z=0;
+  
   sensorInit();
-  Serial.begin(38400); 
+  lcd.begin (16,2);
+  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
+  lcd.setBacklight(HIGH);
+  rtc.begin();
+  Serial.begin(38400);
+  pinMode(10, OUTPUT);
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    return;
+  }
+  Serial.println("card initialized.");
+   Wire.begin(); 
 }
 
 void loop(){
+  time = rtc.getTimeStr();
   distanceData = getDistance();//read distance sensor values
   
   // read acceleration sensors:
-  gForceVector1 = GetMpuValue(MPU1);
-  gForceVector2 = GetMpuValue(MPU2);
-  gForceVectorAverage = avaregeVectors(gForceVector1,gForceVector2); 
-  angle = degrees(acos(dotProduct(gForceVectorAverage,k)/magnitude(gForceVectorAverage)));
+  gForceVector1 = GetMpuValue(MPU);
+  angle = degrees(acos(dotProduct(gForceVector1,k)/magnitude(gForceVector1)));
   
   // append sesnsor values to stirng:
   dataString = String(distanceData.sensor1)+","+String(distanceData.sensor2)+","+String(distanceData.sensor3)+","
-  +String(angle)+","+String(rtc.getDateStr())+","+String(rtc.getTimeStr());
-
-  dataFile = SD.open("datalog.txt", FILE_WRITE);
-
+  +String(angle)+","+time;
+  
+  lcd.clear ( );
+  lcd.setCursor(0, 0);
+  lcd.print(String(distanceData.sensor1)+" "+String(distanceData.sensor2)+" "+String(distanceData.sensor3));
+  lcd.setCursor(0, 1);
+  lcd.print(String(angle));
+  lcd.setCursor(4, 1);
+  lcd.print(time);
+  Serial.print(String(gForceVector1.X)+" "+String(gForceVector1.Y)+" "+String(gForceVector1.Z));
+  Serial.println(dataString);
+  File dataFile = SD.open("datalog.txt", FILE_WRITE);
   // if the file is available, write to it:
   if (dataFile) {
     dataFile.println(dataString);
     dataFile.close();
     Serial.println(dataString);
-    delay(1000);
+    delay(100);
   }  
   // if the file isn't open, pop up an error:
   else {
     Serial.println("error opening datalog.txt");
   }
+  delay(100);
 }
 Distance getDistance(){
   distance.sensor1 = sensor1.readRangeContinuousMillimeters();// get distance for sensor 1
@@ -95,8 +130,7 @@ void sensorInit(){
   sensor2.startContinuous();// measure continuously for sensor 2  
   sensor3.startContinuous();// measure continuously for sensor 3
   
-  mpuInit(MPU1);
-  mpuInit(MPU2);
+  mpuInit(MPU);
 }
 Vector avaregeVectors(Vector vectorA,Vector vectorB){
   tempVector.X = (vectorA.X+vectorB.X)/2;
