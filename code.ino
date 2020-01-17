@@ -10,10 +10,10 @@ typedef struct {
     float X, Y, Z; 
 }Vector; 
 
+Vector K;
 Vector gForceVector;
 Vector gForceVector1;
 Vector gForceVector2;
-Vector k;
 Vector gForceVectorAverage;
 Vector tempVector;
 
@@ -44,7 +44,7 @@ String dataString = "";
 #define D6_pin 6
 #define D7_pin 7
 
-LiquidCrystal_I2C lcd(I2C_ADDR, En_pin,Rw_pin,Rs_pin,D4_pin,D5_pin,D6_pin,D7_pin);//Initialise the LCD
+LiquidCrystal_I2C lcd(I2C_ADDR, 16,2);//Initialise the LCD
 Vector GetMpuValue(const int MPU);
 Vector avaregeVectors(Vector vectorA,Vector vectorB);
 Distance getDistance();
@@ -52,16 +52,15 @@ float dotProduct(Vector vectorA,Vector vectorB);
 float magnitude(Vector vector);
 String time;
 void setup(){
-  k.X=1;
-  k.Y=0;
-  k.Z=0;
-  
+  K.X=1;
+  K.Y=0;
+  K.Z=0;
+  Serial.begin(38400);
   sensorInit();
   lcd.begin (16,2);
-  lcd.setBacklightPin(BACKLIGHT_PIN,POSITIVE);
   lcd.setBacklight(HIGH);
   rtc.begin();
-  Serial.begin(38400);
+  
   pinMode(10, OUTPUT);
   // see if the card is present and can be initialized:
   if (!SD.begin(chipSelect)) {
@@ -70,7 +69,7 @@ void setup(){
     return;
   }
   Serial.println("card initialized.");
-   Wire.begin(); 
+  Wire.begin(); 
 }
 
 void loop(){
@@ -79,7 +78,7 @@ void loop(){
   
   // read acceleration sensors:
   gForceVector1 = GetMpuValue(MPU);
-  angle = degrees(acos(dotProduct(gForceVector1,k)/magnitude(gForceVector1)));
+  angle = degrees(acos(dotProduct(gForceVector1,K)/magnitude(gForceVector1)));
   
   // append sesnsor values to stirng:
   dataString = String(distanceData.sensor1)+","+String(distanceData.sensor2)+","+String(distanceData.sensor3)+","
@@ -99,7 +98,7 @@ void loop(){
   if (dataFile) {
     dataFile.println(dataString);
     dataFile.close();
-    Serial.println(dataString);
+    //Serial.println(dataString);
     delay(100);
   }  
   // if the file isn't open, pop up an error:
@@ -109,26 +108,46 @@ void loop(){
   delay(100);
 }
 Distance getDistance(){
-  distance.sensor1 = sensor1.readRangeContinuousMillimeters();// get distance for sensor 1
-  distance.sensor2 = sensor2.readRangeContinuousMillimeters();// get distance for sensor 2
-  distance.sensor3 = sensor3.readRangeContinuousMillimeters();// get distance for sensor 3
+  distance.sensor1 = sensor1.readRangeSingleMillimeters();// get distance for sensor 1
+  distance.sensor2 = sensor2.readRangeSingleMillimeters();// get distance for sensor 2
+  distance.sensor3 = sensor3.readRangeSingleMillimeters();// get distance for sensor 3
   return distance;
 }
 void sensorInit(){
+  
+  pinMode(9, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(11, OUTPUT);
+  digitalWrite(9, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(11, LOW);
+
+  delay(500);
   Wire.begin();
 
-  sensor1.init();// initialize sensor 1
-  sensor1.setTimeout(500);// set time out for sensor 1
- 
-  sensor2.init();// initialize sensor 2
-  sensor2.setTimeout(500);// set time out for sensor 2
- 
-  sensor3.init();// initialize sensor 3
-  sensor3.setTimeout(500);// set time out for sensor 3
 
-  sensor1.startContinuous();// measure continuously for sensor 1
-  sensor2.startContinuous();// measure continuously for sensor 2  
-  sensor3.startContinuous();// measure continuously for sensor 3
+  //SENSOR
+  digitalWrite(9, HIGH);
+  sensor1.init(true);
+  sensor1.setAddress(0x30);
+  Serial.println("set address 0x30 for first sensor");
+  delay(100);
+
+  digitalWrite(8, HIGH);
+  sensor2.init(true);
+  sensor2.setAddress(0x31);
+  Serial.println("set address 0x31 for second sensor");
+  delay(100);
+
+  digitalWrite(11, HIGH);
+  sensor3.init(true);
+  sensor3.setAddress(0x32);
+  Serial.println("set address 0x32 for third sensor");
+  delay(100);
+
+  sensor1.setTimeout(500);
+  sensor2.setTimeout(500);
+  sensor3.setTimeout(500);
   
   mpuInit(MPU);
 }
